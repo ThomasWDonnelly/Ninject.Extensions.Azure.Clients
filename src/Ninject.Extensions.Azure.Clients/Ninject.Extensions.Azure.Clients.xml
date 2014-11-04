@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ninject.Extensions.Azure.Clients</name>
+    </assembly>
+    <members>
+        <member name="T:Ninject.Extensions.Azure.Clients.AzureClientsModule">
+            <summary>
+            Module that sets up all the bindings the extension needs.
+            It will only bind types that have not yet been bound. Recommend that you load it last.
+            </summary>
+        </member>
+        <member name="T:Ninject.Extensions.Azure.Clients.ClientFactory">
+            <summary>
+            Default implementation of <see cref="T:Ninject.Extensions.Azure.Clients.ICreateClients"/>.
+            </summary>
+        </member>
+        <member name="T:Ninject.Extensions.Azure.Clients.ICreateClients">
+            <summary>
+            Definition of the factory.
+            </summary>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ICreateClients.CreateStorageQueueClientAsync(System.String)">
+            <summary>
+            Creates a cloud queue (Azure Storage Queue) given the queue name.
+            </summary>
+            <param name="queueName">Name of the storage queue</param>
+            <returns>CloudQueue</returns>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ICreateClients.CreateServicebusQueueClientAsync(System.String)">
+            <summary>
+            Creates a queue client (Azure Service Bus Queue) given the queue name.
+            </summary>
+            <param name="queueName">Name of the queue</param>
+            <returns>QueueClient</returns>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ICreateClients.CreateTopicClientAsync(System.String)">
+            <summary>
+            Creates a topic client (Azure Service Bus Topic) given the topic name.
+            </summary>
+            <param name="topicName">Name of the topic</param>
+            <returns>TopicClient</returns>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ICreateClients.CreateSubscriptionClientAsync(System.String,System.String)">
+            <summary>
+            Creates a subscription client (Azure Service Bus Topic) given the topic and subscription name.
+            </summary>
+            <param name="topicName">The topic to subscribe to</param>
+            <param name="subscriptionName">The name of the subscription</param>
+            <returns>SubscriptionClient</returns>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ClientFactory.#ctor(Ninject.IKernel)">
+            <summary>
+            Takes in the IKernel, required to resolve and add bindings.
+            </summary>
+            <param name="kernel"></param>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ClientFactory.CreateStorageQueueClientAsync(System.String)">
+            <summary>
+            Creates a cloud queue (Azure Storage Queue) given the queue name.
+            </summary>
+            <param name="queueName">Name of the storage queue</param>
+            <returns>CloudQueue</returns>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ClientFactory.CreateServicebusQueueClientAsync(System.String)">
+            <summary>
+            Creates a queue client (Azure Service Bus Queue) given the queue name.
+            </summary>
+            <param name="queueName">Name of the queue</param>
+            <returns>QueueClient</returns>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ClientFactory.CreateTopicClientAsync(System.String)">
+            <summary>
+            Creates a topic client (Azure Service Bus Topic) given the topic name.
+            </summary>
+            <param name="topicName">Name of the topic</param>
+            <returns>TopicClient</returns>
+        </member>
+        <member name="M:Ninject.Extensions.Azure.Clients.ClientFactory.CreateSubscriptionClientAsync(System.String,System.String)">
+            <summary>
+            Creates a subscription client (Azure Service Bus Topic) given the topic and subscription name.
+            </summary>
+            <param name="topicName">The topic to subscribe to</param>
+            <param name="subscriptionName">The name of the subscription</param>
+            <returns>SubscriptionClient</returns>
+        </member>
+    </members>
+</doc>
