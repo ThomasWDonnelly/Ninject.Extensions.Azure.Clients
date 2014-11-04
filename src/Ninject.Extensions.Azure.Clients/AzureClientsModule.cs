@@ -6,6 +6,10 @@ using Ninject.Modules;
 
 namespace Ninject.Extensions.Azure.Clients
 {
+    /// <summary>
+    /// Module that sets up all the bindings the extension needs.
+    /// It will only bind types that have not yet been bound. Recommend that you load it last.
+    /// </summary>
     public class AzureClientsModule : NinjectModule
     {
         private readonly string _servicebusConnection =

@@ -1,0 +1,27 @@
+﻿<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Ninject.Extensions.Azure.Clients</id>
+    <version>1.0.0</version>
+    <authors>Jarle Nygård</authors>
+    <owners>Proactima Solutions AS</owners>
+    <licenseUrl>https://github.com/proactima/Ninject.Extensions.Azure.Clients/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/proactima/Ninject.Extensions.Azure.Clients</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Basic factory to create various clients through Ninject.</description>
+    <releaseNotes>Initial release</releaseNotes>
+    <copyright>Copyright © Proactima Solutions AS - 2014-2015</copyright>
+    <dependencies>
+      <dependency id="Newtonsoft.Json" version="6.0"/>
+      <dependency id="Ninject" version="3.2" />
+      <dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="2.0" />
+      <dependency id="WindowsAzure.ServiceBus" version="2.4" />
+      <dependency id="WindowsAzure.Storage" version="4.3"/>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\Ninject.Extensions.Azure.Clients.dll" target="lib\net451" />
+    <file src="bin\Release\Ninject.Extensions.Azure.Clients.pdb" target="lib\net451" />
+    <file src="bin\Release\Ninject.Extensions.Azure.Clients.XML" target="lib\net451" />
+  </files>
+</package>

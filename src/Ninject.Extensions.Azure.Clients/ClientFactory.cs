@@ -5,15 +5,27 @@ using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Ninject.Extensions.Azure.Clients
 {
+    /// <summary>
+    /// Default implementation of <see cref="ICreateClients"/>.
+    /// </summary>
     public class ClientFactory : ICreateClients
     {
         private readonly IKernel _kernel;
 
+        /// <summary>
+        /// Takes in the IKernel, required to resolve and add bindings.
+        /// </summary>
+        /// <param name="kernel"></param>
         public ClientFactory(IKernel kernel)
         {
             _kernel = kernel;
         }
 
+        /// <summary>
+        /// Creates a cloud queue (Azure Storage Queue) given the queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the storage queue</param>
+        /// <returns>CloudQueue</returns>
         public async Task<CloudQueue> CreateStorageQueueClientAsync(string queueName)
         {
             var client = _kernel.TryGet<CloudQueue>(queueName);
@@ -27,6 +39,11 @@ namespace Ninject.Extensions.Azure.Clients
             return queue;
         }
 
+        /// <summary>
+        /// Creates a queue client (Azure Service Bus Queue) given the queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue</param>
+        /// <returns>QueueClient</returns>
         public async Task<QueueClient> CreateServicebusQueueClientAsync(string queueName)
         {
             var client = _kernel.TryGet<QueueClient>(queueName);
@@ -48,6 +65,11 @@ namespace Ninject.Extensions.Azure.Clients
             return client;
         }
 
+        /// <summary>
+        /// Creates a topic client (Azure Service Bus Topic) given the topic name.
+        /// </summary>
+        /// <param name="topicName">Name of the topic</param>
+        /// <returns>TopicClient</returns>
         public async Task<TopicClient> CreateTopicClientAsync(string topicName)
         {
             var client = _kernel.TryGet<TopicClient>(topicName);
@@ -68,6 +90,12 @@ namespace Ninject.Extensions.Azure.Clients
             return client;
         }
 
+        /// <summary>
+        /// Creates a subscription client (Azure Service Bus Topic) given the topic and subscription name.
+        /// </summary>
+        /// <param name="topicName">The topic to subscribe to</param>
+        /// <param name="subscriptionName">The name of the subscription</param>
+        /// <returns>SubscriptionClient</returns>
         public async Task<SubscriptionClient> CreateSubscriptionClientAsync(string topicName, string subscriptionName)
         {
             var client = _kernel.TryGet<SubscriptionClient>(subscriptionName);
