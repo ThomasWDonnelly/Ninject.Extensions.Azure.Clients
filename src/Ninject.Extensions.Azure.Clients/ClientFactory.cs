@@ -164,7 +164,7 @@ namespace Ninject.Extensions.Azure.Clients
             CloudQueue client;
             if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            using (await _storageQueueLockAsync.LockAsync())
+            using (await _storageQueueLockAsync.LockAsync().ConfigureAwait(false))
             {
                 if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
@@ -187,7 +187,7 @@ namespace Ninject.Extensions.Azure.Clients
             QueueClient client;
             if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            using (await _serviceBusQueueLockAsync.LockAsync())
+            using (await _serviceBusQueueLockAsync.LockAsync().ConfigureAwait(false))
             {
                 if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
@@ -218,7 +218,7 @@ namespace Ninject.Extensions.Azure.Clients
             TopicClient client;
             if (TryGetFromKernel(_kernel, topicName, out client)) return client;
 
-            using (await _serviceBusTopicLockAsync.LockAsync())
+            using (await _serviceBusTopicLockAsync.LockAsync().ConfigureAwait(false))
             {
                 if (TryGetFromKernel(_kernel, topicName, out client)) return client;
 
@@ -249,7 +249,7 @@ namespace Ninject.Extensions.Azure.Clients
             SubscriptionClient client;
             if (TryGetFromKernel(_kernel, subscriptionName, out client)) return client;
 
-            using (await _serviceBusSubLockAsync.LockAsync())
+            using (await _serviceBusSubLockAsync.LockAsync().ConfigureAwait(false))
             {
                 if (TryGetFromKernel(_kernel, subscriptionName, out client)) return client;
 
