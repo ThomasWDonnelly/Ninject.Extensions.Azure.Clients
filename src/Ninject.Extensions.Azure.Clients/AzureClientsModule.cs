@@ -2,6 +2,7 @@
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Ninject.Modules;
 
 namespace Ninject.Extensions.Azure.Clients
@@ -22,30 +23,34 @@ namespace Ninject.Extensions.Azure.Clients
         {
             Bind<ICreateClients>().To<ClientFactory>();
 
-            this.BindUnlessBoundAsSingleton(c =>
-            {
-                var storageAccount = CloudStorageAccount.Parse(_storageConnection);
-                return storageAccount;
-            });
+            Bind<CloudStorageAccount>()
+                .ToMethod(c =>
+                {
+                    var storageAccount = CloudStorageAccount.Parse(_storageConnection);
+                    return storageAccount;
+                });
 
-            this.BindUnlessBoundAsSingleton(c =>
-            {
-                var storageAccount = Kernel.Get<CloudStorageAccount>();
-                var queueClient = storageAccount.CreateCloudQueueClient();
-                return queueClient;
-            });
+            Bind<CloudQueueClient>()
+                .ToMethod(c =>
+                {
+                    var storageAccount = Kernel.Get<CloudStorageAccount>();
+                    var queueClient = storageAccount.CreateCloudQueueClient();
+                    return queueClient;
+                });
 
-            this.BindUnlessBoundAsSingleton(c =>
-            {
-                var namespaceManager = NamespaceManager.CreateFromConnectionString(_servicebusConnection);
-                return namespaceManager;
-            });
+            Bind<NamespaceManager>()
+                .ToMethod(c =>
+                {
+                    var namespaceManager = NamespaceManager.CreateFromConnectionString(_servicebusConnection);
+                    return namespaceManager;
+                });
 
-            this.BindUnlessBoundAsSingleton(c =>
-            {
-                var fac = MessagingFactory.CreateFromConnectionString(_servicebusConnection);
-                return fac;
-            });
+            Bind<MessagingFactory>()
+                .ToMethod(c =>
+                {
+                    var fac = MessagingFactory.CreateFromConnectionString(_servicebusConnection);
+                    return fac;
+                });
         }
     }
 }

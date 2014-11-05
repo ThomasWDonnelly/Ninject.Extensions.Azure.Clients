@@ -85,7 +85,6 @@
     <Compile Include="AzureClientsModule.cs" />
     <Compile Include="ClientFactory.cs" />
     <Compile Include="ICreateClients.cs" />
-    <Compile Include="NinjectModuleExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
