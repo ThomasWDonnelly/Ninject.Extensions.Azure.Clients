@@ -22,6 +22,7 @@ namespace Ninject.Extensions.Azure.Clients
         public override void Load()
         {
             Bind<ICreateClientsAsync>().To<ClientFactory>();
+            Bind<ICreateClients>().To<ClientFactory>();
 
             Bind<CloudStorageAccount>()
                 .ToMethod(c =>
