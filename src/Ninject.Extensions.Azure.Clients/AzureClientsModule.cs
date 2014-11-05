@@ -19,6 +19,9 @@ namespace Ninject.Extensions.Azure.Clients
         private readonly string _storageConnection =
             CloudConfigurationManager.GetSetting("StorageConnectionString");
 
+        /// <summary>
+        /// will setup bindings for stuff needed by the extension
+        /// </summary>
         public override void Load()
         {
             Bind<ICreateClientsAsync>().To<ClientFactory>();

@@ -2,6 +2,8 @@
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Ninject.Syntax;
+using Nito.AsyncEx;
 
 namespace Ninject.Extensions.Azure.Clients
 {
@@ -11,6 +13,19 @@ namespace Ninject.Extensions.Azure.Clients
     public class ClientFactory : ICreateClientsAsync, ICreateClients
     {
         private readonly IKernel _kernel;
+
+        #region Locks
+
+        private readonly object _serviceBusQueueLock = new object();
+        private readonly AsyncLock _serviceBusQueueLockAsync = new AsyncLock();
+        private readonly object _serviceBusSubLock = new object();
+        private readonly AsyncLock _serviceBusSubLockAsync = new AsyncLock();
+        private readonly object _serviceBusTopicLock = new object();
+        private readonly AsyncLock _serviceBusTopicLockAsync = new AsyncLock();
+        private readonly object _storageQueueLock = new object();
+        private readonly AsyncLock _storageQueueLockAsync = new AsyncLock();
+
+        #endregion
 
         /// <summary>
         /// Takes in the IKernel, required to resolve and add bindings.
@@ -28,15 +43,20 @@ namespace Ninject.Extensions.Azure.Clients
         /// <returns>CloudQueue</returns>
         public CloudQueue CreateStorageQueueClient(string queueName)
         {
-            var client = _kernel.TryGet<CloudQueue>(queueName);
-            if (client != null) return client;
+            CloudQueue client;
+            if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            var queueClient = _kernel.Get<CloudQueueClient>();
+            lock (_storageQueueLock)
+            {
+                if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            var queue = queueClient.GetQueueReference(queueName);
-            queue.CreateIfNotExists();
+                var queueClient = _kernel.Get<CloudQueueClient>();
 
-            return queue;
+                var queue = queueClient.GetQueueReference(queueName);
+                queue.CreateIfNotExists();
+
+                return queue;
+            }
         }
 
         /// <summary>
@@ -46,23 +66,28 @@ namespace Ninject.Extensions.Azure.Clients
         /// <returns>QueueClient</returns>
         public QueueClient CreateServicebusQueueClient(string queueName)
         {
-            var client = _kernel.TryGet<QueueClient>(queueName);
-            if (client != null) return client;
+            QueueClient client;
+            if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            var namespaceMgr = _kernel.Get<NamespaceManager>();
+            lock (_serviceBusQueueLock)
+            {
+                if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            if (! namespaceMgr.QueueExists(queueName))
-                namespaceMgr.CreateQueue(queueName);
+                var namespaceMgr = _kernel.Get<NamespaceManager>();
 
-            var messagingFactory = _kernel.Get<MessagingFactory>();
+                if (!namespaceMgr.QueueExists(queueName))
+                    namespaceMgr.CreateQueue(queueName);
 
-            _kernel.Bind<QueueClient>()
-                .ToMethod(context => messagingFactory.CreateQueueClient(queueName))
-                .InSingletonScope()
-                .Named(queueName);
+                var messagingFactory = _kernel.Get<MessagingFactory>();
 
-            client = _kernel.Get<QueueClient>(queueName);
-            return client;
+                _kernel.Bind<QueueClient>()
+                    .ToMethod(context => messagingFactory.CreateQueueClient(queueName))
+                    .InSingletonScope()
+                    .Named(queueName);
+
+                client = _kernel.Get<QueueClient>(queueName);
+                return client;
+            }
         }
 
         /// <summary>
@@ -72,22 +97,27 @@ namespace Ninject.Extensions.Azure.Clients
         /// <returns>TopicClient</returns>
         public TopicClient CreateTopicClient(string topicName)
         {
-            var client = _kernel.TryGet<TopicClient>(topicName);
-            if (client != null) return client;
+            TopicClient client;
+            if (TryGetFromKernel(_kernel, topicName, out client)) return client;
 
-            var messagingFactory = _kernel.Get<MessagingFactory>();
+            lock (_serviceBusTopicLock)
+            {
+                if (TryGetFromKernel(_kernel, topicName, out client)) return client;
 
-            var namespaceMgr = _kernel.Get<NamespaceManager>();
-            if (! namespaceMgr.TopicExists(topicName))
-                namespaceMgr.CreateTopic(topicName);
+                var messagingFactory = _kernel.Get<MessagingFactory>();
 
-            _kernel.Bind<TopicClient>()
-                .ToMethod(context => messagingFactory.CreateTopicClient(topicName))
-                .InSingletonScope()
-                .Named(topicName);
+                var namespaceMgr = _kernel.Get<NamespaceManager>();
+                if (!namespaceMgr.TopicExists(topicName))
+                    namespaceMgr.CreateTopic(topicName);
 
-            client = _kernel.Get<TopicClient>(topicName);
-            return client;
+                _kernel.Bind<TopicClient>()
+                    .ToMethod(context => messagingFactory.CreateTopicClient(topicName))
+                    .InSingletonScope()
+                    .Named(topicName);
+
+                client = _kernel.Get<TopicClient>(topicName);
+                return client;
+            }
         }
 
         /// <summary>
@@ -98,25 +128,30 @@ namespace Ninject.Extensions.Azure.Clients
         /// <returns>SubscriptionClient</returns>
         public SubscriptionClient CreateSubscriptionClient(string topicName, string subscriptionName)
         {
-            var client = _kernel.TryGet<SubscriptionClient>(subscriptionName);
-            if (client != null) return client;
+            SubscriptionClient client;
+            if (TryGetFromKernel(_kernel, subscriptionName, out client)) return client;
 
-            var messagingFactory = _kernel.Get<MessagingFactory>();
+            lock (_serviceBusSubLock)
+            {
+                if (TryGetFromKernel(_kernel, subscriptionName, out client)) return client;
 
-            var namespaceMgr = _kernel.Get<NamespaceManager>();
-            if (! namespaceMgr.TopicExists(topicName))
-                namespaceMgr.CreateTopic(topicName);
+                var messagingFactory = _kernel.Get<MessagingFactory>();
 
-            if (! namespaceMgr.SubscriptionExists(topicName, subscriptionName))
-                namespaceMgr.CreateSubscription(topicName, subscriptionName);
+                var namespaceMgr = _kernel.Get<NamespaceManager>();
+                if (!namespaceMgr.TopicExists(topicName))
+                    namespaceMgr.CreateTopic(topicName);
 
-            _kernel.Bind<SubscriptionClient>()
-                .ToMethod(context => messagingFactory.CreateSubscriptionClient(topicName, subscriptionName))
-                .InSingletonScope()
-                .Named(subscriptionName);
+                if (!namespaceMgr.SubscriptionExists(topicName, subscriptionName))
+                    namespaceMgr.CreateSubscription(topicName, subscriptionName);
 
-            client = _kernel.Get<SubscriptionClient>(subscriptionName);
-            return client;
+                _kernel.Bind<SubscriptionClient>()
+                    .ToMethod(context => messagingFactory.CreateSubscriptionClient(topicName, subscriptionName))
+                    .InSingletonScope()
+                    .Named(subscriptionName);
+
+                client = _kernel.Get<SubscriptionClient>(subscriptionName);
+                return client;
+            }
         }
 
         /// <summary>
@@ -126,15 +161,20 @@ namespace Ninject.Extensions.Azure.Clients
         /// <returns>CloudQueue</returns>
         public async Task<CloudQueue> CreateStorageQueueClientAsync(string queueName)
         {
-            var client = _kernel.TryGet<CloudQueue>(queueName);
-            if (client != null) return client;
+            CloudQueue client;
+            if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            var queueClient = _kernel.Get<CloudQueueClient>();
+            using (await _storageQueueLockAsync.LockAsync())
+            {
+                if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            var queue = queueClient.GetQueueReference(queueName);
-            await queue.CreateIfNotExistsAsync().ConfigureAwait(false);
+                var queueClient = _kernel.Get<CloudQueueClient>();
 
-            return queue;
+                var queue = queueClient.GetQueueReference(queueName);
+                await queue.CreateIfNotExistsAsync().ConfigureAwait(false);
+
+                return queue;
+            }
         }
 
         /// <summary>
@@ -144,23 +184,28 @@ namespace Ninject.Extensions.Azure.Clients
         /// <returns>QueueClient</returns>
         public async Task<QueueClient> CreateServicebusQueueClientAsync(string queueName)
         {
-            var client = _kernel.TryGet<QueueClient>(queueName);
-            if (client != null) return client;
+            QueueClient client;
+            if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            var namespaceMgr = _kernel.Get<NamespaceManager>();
+            using (await _serviceBusQueueLockAsync.LockAsync())
+            {
+                if (TryGetFromKernel(_kernel, queueName, out client)) return client;
 
-            if (!await namespaceMgr.QueueExistsAsync(queueName).ConfigureAwait(false))
-                await namespaceMgr.CreateQueueAsync(queueName).ConfigureAwait(false);
+                var namespaceMgr = _kernel.Get<NamespaceManager>();
 
-            var messagingFactory = _kernel.Get<MessagingFactory>();
+                if (!await namespaceMgr.QueueExistsAsync(queueName).ConfigureAwait(false))
+                    await namespaceMgr.CreateQueueAsync(queueName).ConfigureAwait(false);
 
-            _kernel.Bind<QueueClient>()
-                .ToMethod(context => messagingFactory.CreateQueueClient(queueName))
-                .InSingletonScope()
-                .Named(queueName);
+                var messagingFactory = _kernel.Get<MessagingFactory>();
 
-            client = _kernel.Get<QueueClient>(queueName);
-            return client;
+                _kernel.Bind<QueueClient>()
+                    .ToMethod(context => messagingFactory.CreateQueueClient(queueName))
+                    .InSingletonScope()
+                    .Named(queueName);
+
+                client = _kernel.Get<QueueClient>(queueName);
+                return client;
+            }
         }
 
         /// <summary>
@@ -170,22 +215,27 @@ namespace Ninject.Extensions.Azure.Clients
         /// <returns>TopicClient</returns>
         public async Task<TopicClient> CreateTopicClientAsync(string topicName)
         {
-            var client = _kernel.TryGet<TopicClient>(topicName);
-            if (client != null) return client;
+            TopicClient client;
+            if (TryGetFromKernel(_kernel, topicName, out client)) return client;
 
-            var messagingFactory = _kernel.Get<MessagingFactory>();
+            using (await _serviceBusTopicLockAsync.LockAsync())
+            {
+                if (TryGetFromKernel(_kernel, topicName, out client)) return client;
 
-            var namespaceMgr = _kernel.Get<NamespaceManager>();
-            if (!await namespaceMgr.TopicExistsAsync(topicName).ConfigureAwait(false))
-                await namespaceMgr.CreateTopicAsync(topicName).ConfigureAwait(false);
+                var messagingFactory = _kernel.Get<MessagingFactory>();
 
-            _kernel.Bind<TopicClient>()
-                .ToMethod(context => messagingFactory.CreateTopicClient(topicName))
-                .InSingletonScope()
-                .Named(topicName);
+                var namespaceMgr = _kernel.Get<NamespaceManager>();
+                if (!await namespaceMgr.TopicExistsAsync(topicName).ConfigureAwait(false))
+                    await namespaceMgr.CreateTopicAsync(topicName).ConfigureAwait(false);
 
-            client = _kernel.Get<TopicClient>(topicName);
-            return client;
+                _kernel.Bind<TopicClient>()
+                    .ToMethod(context => messagingFactory.CreateTopicClient(topicName))
+                    .InSingletonScope()
+                    .Named(topicName);
+
+                client = _kernel.Get<TopicClient>(topicName);
+                return client;
+            }
         }
 
         /// <summary>
@@ -196,25 +246,37 @@ namespace Ninject.Extensions.Azure.Clients
         /// <returns>SubscriptionClient</returns>
         public async Task<SubscriptionClient> CreateSubscriptionClientAsync(string topicName, string subscriptionName)
         {
-            var client = _kernel.TryGet<SubscriptionClient>(subscriptionName);
-            if (client != null) return client;
+            SubscriptionClient client;
+            if (TryGetFromKernel(_kernel, subscriptionName, out client)) return client;
 
-            var messagingFactory = _kernel.Get<MessagingFactory>();
+            using (await _serviceBusSubLockAsync.LockAsync())
+            {
+                if (TryGetFromKernel(_kernel, subscriptionName, out client)) return client;
 
-            var namespaceMgr = _kernel.Get<NamespaceManager>();
-            if (!await namespaceMgr.TopicExistsAsync(topicName).ConfigureAwait(false))
-                await namespaceMgr.CreateTopicAsync(topicName).ConfigureAwait(false);
+                var messagingFactory = _kernel.Get<MessagingFactory>();
 
-            if (!await namespaceMgr.SubscriptionExistsAsync(topicName, subscriptionName).ConfigureAwait(false))
-                await namespaceMgr.CreateSubscriptionAsync(topicName, subscriptionName).ConfigureAwait(false);
+                var namespaceMgr = _kernel.Get<NamespaceManager>();
+                if (!await namespaceMgr.TopicExistsAsync(topicName).ConfigureAwait(false))
+                    await namespaceMgr.CreateTopicAsync(topicName).ConfigureAwait(false);
 
-            _kernel.Bind<SubscriptionClient>()
-                .ToMethod(context => messagingFactory.CreateSubscriptionClient(topicName, subscriptionName))
-                .InSingletonScope()
-                .Named(subscriptionName);
+                if (!await namespaceMgr.SubscriptionExistsAsync(topicName, subscriptionName).ConfigureAwait(false))
+                    await namespaceMgr.CreateSubscriptionAsync(topicName, subscriptionName).ConfigureAwait(false);
 
-            client = _kernel.Get<SubscriptionClient>(subscriptionName);
-            return client;
+                _kernel.Bind<SubscriptionClient>()
+                    .ToMethod(context => messagingFactory.CreateSubscriptionClient(topicName, subscriptionName))
+                    .InSingletonScope()
+                    .Named(subscriptionName);
+
+                client = _kernel.Get<SubscriptionClient>(subscriptionName);
+                return client;
+            }
+        }
+
+        private static bool TryGetFromKernel<T>(IResolutionRoot kernel, string nameOfBinding, out T client)
+            where T : class
+        {
+            client = kernel.TryGet<T>(nameOfBinding);
+            return client != null;
         }
     }
 }

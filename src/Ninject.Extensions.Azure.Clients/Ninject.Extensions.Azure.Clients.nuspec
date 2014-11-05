@@ -17,6 +17,7 @@
       <dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="2.0" />
       <dependency id="WindowsAzure.ServiceBus" version="2.4" />
       <dependency id="WindowsAzure.Storage" version="4.3"/>
+      <dependency id="Nito.AsyncEx" version="3.0"/>
     </dependencies>
   </metadata>
   <files>
