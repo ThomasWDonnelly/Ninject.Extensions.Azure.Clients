@@ -36,5 +36,12 @@ namespace Ninject.Extensions.Azure.Clients
         /// <param name="subscriptionName">The name of the subscription</param>
         /// <returns>SubscriptionClient</returns>
         SubscriptionClient CreateSubscriptionClient(string topicName, string subscriptionName);
+
+        /// <summary>
+        /// Creates an Event Hub client, given eventHubName
+        /// </summary>
+        /// <param name="eventHubName"></param>
+        /// <returns></returns>
+        EventHubClient CreatEventHubClient(string eventHubName);
     }
 }

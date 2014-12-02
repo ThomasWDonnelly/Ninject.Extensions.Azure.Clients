@@ -1,54 +1,71 @@
-﻿using Microsoft.ServiceBus;
+﻿using System.Threading.Tasks;
+using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Nito.AsyncEx;
 
 namespace Ninject.Extensions.Azure.Clients
 {
     /// <summary>
-    /// Default implementation of <see cref="ICreateClients"/>.
+    /// Default implementation of <see cref="ICreateClientsAsync"/>.
     /// </summary>
-    public sealed partial class ClientFactory : ICreateClients
+    public sealed partial class ClientFactory : ICreateClientsAsync
     {
-        private readonly IKernel _kernel;
-
         #region Locks
 
-        private readonly object _serviceBusQueueLock = new object();
-        private readonly object _serviceBusSubLock = new object();
-        private readonly object _serviceBusTopicLock = new object();
-        private readonly object _storageQueueLock = new object();
+        private readonly AsyncLock _serviceBusQueueLockAsync = new AsyncLock();
+        private readonly AsyncLock _serviceBusSubLockAsync = new AsyncLock();
+        private readonly AsyncLock _serviceBusTopicLockAsync = new AsyncLock();
+        private readonly AsyncLock _storageQueueLockAsync = new AsyncLock();
 
         #endregion
-
-        /// <summary>
-        /// Takes in the IKernel, required to resolve and add bindings.
-        /// </summary>
-        /// <param name="kernel"></param>
-        public ClientFactory(IKernel kernel)
-        {
-            _kernel = kernel;
-        }
 
         /// <summary>
         /// Creates a cloud queue (Azure Storage Queue) given the queue name.
         /// </summary>
         /// <param name="queueName">Name of the storage queue</param>
         /// <returns>CloudQueue</returns>
-        public CloudQueue CreateStorageQueueClient(string queueName)
+        public async Task<CloudQueue> CreateStorageQueueClientAsync(string queueName)
         {
             CloudQueue client;
             if (_kernel.TryGetFromKernel(queueName, out client)) return client;
 
-            lock (_storageQueueLock)
+            using (await _storageQueueLockAsync.LockAsync().ConfigureAwait(false))
             {
                 if (_kernel.TryGetFromKernel(queueName, out client)) return client;
 
                 var queueClient = _kernel.Get<CloudQueueClient>();
 
                 var queue = queueClient.GetQueueReference(queueName);
-                queue.CreateIfNotExists();
+                await queue.CreateIfNotExistsAsync().ConfigureAwait(false);
 
                 return queue;
+            }
+        }
+
+        /// <summary>
+        /// Creates an event hub client  given the hubs name.
+        /// </summary>
+        /// <param name="eventHubName">Name of the queue</param>
+        /// <returns>EventHubClient</returns>
+        public async Task<EventHubClient> CreateEventHubClientAsync(string eventHubName)
+        {
+            EventHubClient client;
+            if (_kernel.TryGetFromKernel(eventHubName, out client)) return client;
+
+            using (await _serviceBusQueueLockAsync.LockAsync().ConfigureAwait(false))
+            {
+                if (_kernel.TryGetFromKernel(eventHubName, out client)) return client;
+
+                var messagingFactory = _kernel.Get<MessagingFactory>();
+
+                _kernel.Bind<EventHubClient>()
+                    .ToMethod(context => messagingFactory.CreateEventHubClient(eventHubName))
+                    .InSingletonScope()
+                    .Named(eventHubName);
+
+                client = _kernel.Get<EventHubClient>(eventHubName);
+                return client;
             }
         }
 
@@ -57,19 +74,19 @@ namespace Ninject.Extensions.Azure.Clients
         /// </summary>
         /// <param name="queueName">Name of the queue</param>
         /// <returns>QueueClient</returns>
-        public QueueClient CreateServicebusQueueClient(string queueName)
+        public async Task<QueueClient> CreateServicebusQueueClientAsync(string queueName)
         {
             QueueClient client;
             if (_kernel.TryGetFromKernel(queueName, out client)) return client;
 
-            lock (_serviceBusQueueLock)
+            using (await _serviceBusQueueLockAsync.LockAsync().ConfigureAwait(false))
             {
                 if (_kernel.TryGetFromKernel(queueName, out client)) return client;
 
                 var namespaceMgr = _kernel.Get<NamespaceManager>();
 
-                if (!namespaceMgr.QueueExists(queueName))
-                    namespaceMgr.CreateQueue(queueName);
+                if (!await namespaceMgr.QueueExistsAsync(queueName).ConfigureAwait(false))
+                    await namespaceMgr.CreateQueueAsync(queueName).ConfigureAwait(false);
 
                 var messagingFactory = _kernel.Get<MessagingFactory>();
 
@@ -88,20 +105,20 @@ namespace Ninject.Extensions.Azure.Clients
         /// </summary>
         /// <param name="topicName">Name of the topic</param>
         /// <returns>TopicClient</returns>
-        public TopicClient CreateTopicClient(string topicName)
+        public async Task<TopicClient> CreateTopicClientAsync(string topicName)
         {
             TopicClient client;
             if (_kernel.TryGetFromKernel(topicName, out client)) return client;
 
-            lock (_serviceBusTopicLock)
+            using (await _serviceBusTopicLockAsync.LockAsync().ConfigureAwait(false))
             {
                 if (_kernel.TryGetFromKernel(topicName, out client)) return client;
 
                 var messagingFactory = _kernel.Get<MessagingFactory>();
 
                 var namespaceMgr = _kernel.Get<NamespaceManager>();
-                if (!namespaceMgr.TopicExists(topicName))
-                    namespaceMgr.CreateTopic(topicName);
+                if (!await namespaceMgr.TopicExistsAsync(topicName).ConfigureAwait(false))
+                    await namespaceMgr.CreateTopicAsync(topicName).ConfigureAwait(false);
 
                 _kernel.Bind<TopicClient>()
                     .ToMethod(context => messagingFactory.CreateTopicClient(topicName))
@@ -119,23 +136,23 @@ namespace Ninject.Extensions.Azure.Clients
         /// <param name="topicName">The topic to subscribe to</param>
         /// <param name="subscriptionName">The name of the subscription</param>
         /// <returns>SubscriptionClient</returns>
-        public SubscriptionClient CreateSubscriptionClient(string topicName, string subscriptionName)
+        public async Task<SubscriptionClient> CreateSubscriptionClientAsync(string topicName, string subscriptionName)
         {
             SubscriptionClient client;
             if (_kernel.TryGetFromKernel(subscriptionName, out client)) return client;
 
-            lock (_serviceBusSubLock)
+            using (await _serviceBusSubLockAsync.LockAsync().ConfigureAwait(false))
             {
                 if (_kernel.TryGetFromKernel(subscriptionName, out client)) return client;
 
                 var messagingFactory = _kernel.Get<MessagingFactory>();
 
                 var namespaceMgr = _kernel.Get<NamespaceManager>();
-                if (!namespaceMgr.TopicExists(topicName))
-                    namespaceMgr.CreateTopic(topicName);
+                if (!await namespaceMgr.TopicExistsAsync(topicName).ConfigureAwait(false))
+                    await namespaceMgr.CreateTopicAsync(topicName).ConfigureAwait(false);
 
-                if (!namespaceMgr.SubscriptionExists(topicName, subscriptionName))
-                    namespaceMgr.CreateSubscription(topicName, subscriptionName);
+                if (!await namespaceMgr.SubscriptionExistsAsync(topicName, subscriptionName).ConfigureAwait(false))
+                    await namespaceMgr.CreateSubscriptionAsync(topicName, subscriptionName).ConfigureAwait(false);
 
                 _kernel.Bind<SubscriptionClient>()
                     .ToMethod(context => messagingFactory.CreateSubscriptionClient(topicName, subscriptionName))
@@ -143,34 +160,6 @@ namespace Ninject.Extensions.Azure.Clients
                     .Named(subscriptionName);
 
                 client = _kernel.Get<SubscriptionClient>(subscriptionName);
-                return client;
-            }
-        }
-
-        /// <summary>
-        /// Will create an event hub with default service bus credentials.
-        /// </summary>
-        /// <param name="eventHubName">Name of the hub</param>
-        /// <returns>EventHubClient</returns>
-        public EventHubClient CreatEventHubClient(string eventHubName)
-        {
-            EventHubClient client;
-            if (_kernel.TryGetFromKernel(eventHubName, out client)) return client;
-
-            lock (_storageQueueLock)
-            {
-                if (_kernel.TryGetFromKernel(eventHubName, out client)) return client;
-
-                _kernel.Bind<EventHubClient>()
-                    .ToMethod(context =>
-                    {
-                        var factory = _kernel.Get<MessagingFactory>();
-                        return factory.CreateEventHubClient(eventHubName);
-                    })
-                    .InSingletonScope()
-                    .Named(eventHubName);
-
-                client = _kernel.Get<EventHubClient>(eventHubName);
                 return client;
             }
         }

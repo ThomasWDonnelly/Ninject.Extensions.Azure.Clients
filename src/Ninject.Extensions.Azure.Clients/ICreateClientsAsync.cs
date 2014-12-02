@@ -27,6 +27,13 @@ namespace Ninject.Extensions.Azure.Clients
         /// <param name="topicName">Name of the topic</param>
         /// <returns>TopicClient</returns>
         Task<TopicClient> CreateTopicClientAsync(string topicName);
+
+        /// <summary>
+        /// Create an event hub client given the hubs name.
+        /// </summary>
+        /// <param name="eventHubName">Name of the hub</param>
+        /// <returns>EventHubClient</returns>
+        Task<EventHubClient> CreateEventHubClientAsync(string eventHubName);
         /// <summary>
         /// Creates a subscription client (Azure Service Bus Topic) given the topic and subscription name.
         /// </summary>
