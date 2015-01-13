@@ -10,6 +10,15 @@ namespace Ninject.Extensions.Azure.Clients
     public interface ICreateClientsAsync
     {
         /// <summary>
+        /// Creates an event processor host.
+        /// </summary>
+        /// <param name="eventHubPath">The path to the Event Hub from which to start receiving event data.</param>
+        /// <param name="hostname">Base name for an instance of the host.</param>
+        /// <param name="consumerGroupName">The name of the Event Hubs consumer group from which to start receiving event data.</param>
+        /// <returns>A new EventProcessorHost</returns>
+        Task<EventProcessorHost> CreateEventProcessorHostAsync(string eventHubPath, string hostname, string consumerGroupName = EventHubConsumerGroup.DefaultGroupName);
+
+        /// <summary>
         /// Creates a cloud queue (Azure Storage Queue) given the queue name.
         /// </summary>
         /// <param name="queueName">Name of the storage queue</param>

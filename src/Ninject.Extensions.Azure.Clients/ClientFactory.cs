@@ -1,4 +1,5 @@
-﻿using Microsoft.ServiceBus;
+﻿using System;
+using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.WindowsAzure.Storage.Queue;
 
@@ -30,6 +31,25 @@ namespace Ninject.Extensions.Azure.Clients
         }
 
         /// <summary>
+        /// Creates an event processor host.
+        /// </summary>
+        /// <param name="eventHubPath">The path to the Event Hub from which to start receiving event data.</param>
+        /// <param name="hostname">Base name for an instance of the host.</param>
+        /// <param name="consumerGroupName">The name of the Event Hubs consumer group from which to start receiving event data.</param>
+        /// <returns>A new EventProcessorHost</returns>
+        public EventProcessorHost CreateEventProcessorHost(string eventHubPath, string hostname, string consumerGroupName = EventHubConsumerGroup.DefaultGroupName)
+        {
+            var combinedHostname = hostname + Guid.NewGuid();
+            var storageConnectionString = _kernel.Get<Func<string>>("storageconnectionstring");
+            var servicebusConnectionString = _kernel.Get<Func<string>>("servicebusconnectionstring");
+
+            var eventProcessorHost = new EventProcessorHost(
+                combinedHostname, eventHubPath, consumerGroupName,
+                servicebusConnectionString(), storageConnectionString());
+            return eventProcessorHost;
+        }
+
+        /// <summary>
         /// Creates a cloud queue (Azure Storage Queue) given the queue name.
         /// </summary>
         /// <param name="queueName">Name of the storage queue</param>
@@ -43,12 +63,20 @@ namespace Ninject.Extensions.Azure.Clients
             {
                 if (_kernel.TryGetFromKernel(queueName, out client)) return client;
 
-                var queueClient = _kernel.Get<CloudQueueClient>();
+                _kernel.Bind<CloudQueue>()
+                    .ToMethod(context =>
+                    {
+                        var queueClient = _kernel.Get<CloudQueueClient>();
+                        var queue = queueClient.GetQueueReference(queueName);
+                        queue.CreateIfNotExists();
+                        return queue;
+                    })
+                    .InSingletonScope()
+                    .Named(queueName);
 
-                var queue = queueClient.GetQueueReference(queueName);
-                queue.CreateIfNotExists();
+                client = _kernel.Get<CloudQueue>(queueName);
 
-                return queue;
+                return client;
             }
         }
 
