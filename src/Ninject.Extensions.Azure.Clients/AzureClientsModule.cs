@@ -67,7 +67,8 @@ namespace Ninject.Extensions.Azure.Clients
                     var servicebusConnection = Kernel.Get<Func<string>>("servicebusconnectionstring");
                     var fac = MessagingFactory.CreateFromConnectionString(servicebusConnection());
                     return fac;
-                });
+                })
+                .Named("queuetopic");
 
             Bind<MessagingFactory>()
                 .ToMethod(c =>

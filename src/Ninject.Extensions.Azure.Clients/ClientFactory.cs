@@ -99,7 +99,7 @@ namespace Ninject.Extensions.Azure.Clients
                 if (!namespaceMgr.QueueExists(queueName))
                     namespaceMgr.CreateQueue(queueName);
 
-                var messagingFactory = _kernel.Get<MessagingFactory>();
+                var messagingFactory = _kernel.Get<MessagingFactory>("queuetopic");
 
                 _kernel.Bind<QueueClient>()
                     .ToMethod(context => messagingFactory.CreateQueueClient(queueName))
@@ -125,7 +125,7 @@ namespace Ninject.Extensions.Azure.Clients
             {
                 if (_kernel.TryGetFromKernel(topicName, out client)) return client;
 
-                var messagingFactory = _kernel.Get<MessagingFactory>();
+                var messagingFactory = _kernel.Get<MessagingFactory>("queuetopic");
 
                 var namespaceMgr = _kernel.Get<NamespaceManager>();
                 if (!namespaceMgr.TopicExists(topicName))
@@ -156,7 +156,7 @@ namespace Ninject.Extensions.Azure.Clients
             {
                 if (_kernel.TryGetFromKernel(subscriptionName, out client)) return client;
 
-                var messagingFactory = _kernel.Get<MessagingFactory>();
+                var messagingFactory = _kernel.Get<MessagingFactory>("queuetopic");
 
                 var namespaceMgr = _kernel.Get<NamespaceManager>();
                 if (!namespaceMgr.TopicExists(topicName))
