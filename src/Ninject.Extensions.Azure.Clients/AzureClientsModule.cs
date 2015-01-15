@@ -68,6 +68,15 @@ namespace Ninject.Extensions.Azure.Clients
                     var fac = MessagingFactory.CreateFromConnectionString(servicebusConnection());
                     return fac;
                 });
+
+            Bind<MessagingFactory>()
+                .ToMethod(c =>
+                {
+                    var servicebusConnection = Kernel.Get<Func<string>>("servicebusconnectionstring");
+                    var fac = MessagingFactory.CreateFromConnectionString(servicebusConnection() + ";TransportType=Amqp");
+                    return fac;
+                })
+                .Named("eventhub");
         }
     }
 }

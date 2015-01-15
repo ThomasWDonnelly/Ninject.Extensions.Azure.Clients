@@ -192,7 +192,7 @@ namespace Ninject.Extensions.Azure.Clients
                 _kernel.Bind<EventHubClient>()
                     .ToMethod(context =>
                     {
-                        var factory = _kernel.Get<MessagingFactory>();
+                        var factory = _kernel.Get<MessagingFactory>("eventhub");
                         return factory.CreateEventHubClient(eventHubName);
                     })
                     .InSingletonScope()

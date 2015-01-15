@@ -28,9 +28,10 @@ namespace Ninject.Extensions.Azure.Clients
         /// <param name="hostname">Base name for an instance of the host.</param>
         /// <param name="consumerGroupName">The name of the Event Hubs consumer group from which to start receiving event data.</param>
         /// <returns>A new EventProcessorHost</returns>
-        public async Task<EventProcessorHost> CreateEventProcessorHostAsync(string eventHubPath, string hostname, string consumerGroupName = EventHubConsumerGroup.DefaultGroupName)
+        public async Task<EventProcessorHost> CreateEventProcessorHostAsync(string eventHubPath, string hostname,
+            string consumerGroupName = EventHubConsumerGroup.DefaultGroupName)
         {
-            return await Task.Factory.StartNew(() => 
+            return await Task.Factory.StartNew(() =>
             {
                 var combinedHostname = hostname + Guid.NewGuid();
                 var storageConnectionString = _kernel.Get<Func<string>>("storageconnectionstring");
@@ -80,10 +81,12 @@ namespace Ninject.Extensions.Azure.Clients
             {
                 if (_kernel.TryGetFromKernel(eventHubName, out client)) return client;
 
-                var messagingFactory = _kernel.Get<MessagingFactory>();
-
                 _kernel.Bind<EventHubClient>()
-                    .ToMethod(context => messagingFactory.CreateEventHubClient(eventHubName))
+                    .ToMethod(context =>
+                    {
+                        var factory = _kernel.Get<MessagingFactory>("eventhub");
+                        return factory.CreateEventHubClient(eventHubName);
+                    })
                     .InSingletonScope()
                     .Named(eventHubName);
 
