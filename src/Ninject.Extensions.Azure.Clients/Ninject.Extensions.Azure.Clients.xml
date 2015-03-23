@@ -7,12 +7,12 @@
         <member name="T:Ninject.Extensions.Azure.Clients.AzureClientsModule">
             <summary>
             Module that sets up all the bindings the extension needs.
-            It will only bind types that have not yet been bound. Recommend that you load it last.
+            Rebind if you need different setup.
             </summary>
         </member>
         <member name="M:Ninject.Extensions.Azure.Clients.AzureClientsModule.Load">
             <summary>
-            will setup bindings for stuff needed by the extension
+            Will setup bindings for stuff needed by the extension
             </summary>
         </member>
         <member name="T:Ninject.Extensions.Azure.Clients.ClientFactory">
